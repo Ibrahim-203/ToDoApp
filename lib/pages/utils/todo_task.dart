@@ -6,8 +6,10 @@ import 'package:flutter_slidable/flutter_slidable.dart';
 class ToDoTask extends StatelessWidget {
   final String TaskName;
   final String CreatedDate;
+  final int id;
   Function(BuildContext)? delete_task;
   Function()? secure_task;
+  Function()? task_detail;
   Function()? edit_task;
   Function()? dialog_pass;
   bool secure;
@@ -18,7 +20,9 @@ class ToDoTask extends StatelessWidget {
     required this.CreatedDate,
     required this.delete_task,
     required this.secure_task,
+    required this.task_detail,
     required this.edit_task,
+    required this.id,
     required this.dialog_pass,
     required this.secure,
   });
@@ -44,7 +48,7 @@ class ToDoTask extends StatelessWidget {
               Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => Specifictask(text: TaskName),
+                    builder: (context) => Specifictask(text: TaskName, id: id),
                   ));
             } else {
               dialog_pass?.call();
@@ -91,9 +95,7 @@ class ToDoTask extends StatelessWidget {
                           width: 10,
                         ),
                         GestureDetector(
-                          onTap: () {
-                            print("Détails");
-                          },
+                          onTap: task_detail,
                           child: Icon(
                             Icons.details,
                             color: Colors.white,

@@ -1,7 +1,10 @@
+import 'package:first/database/todo_db.dart';
 import 'package:first/pages/specific_task.dart';
 import 'package:first/pages/utils/dialog_box.dart';
 import 'package:first/pages/utils/todo_task.dart';
 import 'package:flutter/material.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:intl/intl.dart';
 
 class toDoPage extends StatefulWidget {
   const toDoPage({super.key});
@@ -12,16 +15,20 @@ class toDoPage extends StatefulWidget {
 
 class _toDoPageState extends State<toDoPage> {
   final _controller = TextEditingController();
+  ToDoDatabase db = ToDoDatabase();
+
+  final _myBox = Hive.box('todolist');
   // TextEditingController myController = TextEditingController();
-  List todolist = [
-    {'title': 'Jouer au basket', 'date': '2024-06-02', 'secure': false},
-    {'title': 'Apprendre à coder', 'date': '2024-06-01', 'secure': true},
-    {
-      'title': 'Finir l\'application mobile',
-      'date': '2024-06-01',
-      'secure': false
-    },
-  ];
+  @override
+  void initState() {
+    if (_myBox.get("TODOLIST") == null) {
+      db.createInitialData();
+    } else {
+      db.loadData();
+    }
+    // TODO: implement initState
+    super.initState();
+  }
 
   String password = "password";
 // ----------My functions----------------- //
@@ -30,24 +37,49 @@ class _toDoPageState extends State<toDoPage> {
   void onSave() {
     if (_controller.text != "") {
       setState(() {
-        todolist.add([_controller.text, "20-01-2023"]);
+        db.todolist.add({
+          'title': _controller.text,
+          'date': GenerateDate(),
+          'secure': false
+        });
         _controller.clear();
       });
+
+      // await todoDB.create(title: title);
+      // if (!mounted) return;
+      // fetchTodos();
+      // print(futureTodos);
+    } else {
+      const snackBar = SnackBar(
+        content: Text('Veillez remplir le champ'),
+        backgroundColor: Colors.red,
+      );
+      ScaffoldMessenger.of(context).showSnackBar(snackBar);
     }
     Navigator.of(context).pop();
+    db.updateDatabase();
+  }
+
+  //__To Generate current date__
+
+  String GenerateDate() {
+    final DateFormat formatter = DateFormat('yyyy - MM - dd');
+    DateTime now = DateTime.now();
+    return formatter.format(now);
   }
 
 //__Delete Data__//
   void deleteTask(int index) {
     setState(() {
-      todolist.removeAt(index);
+      db.todolist.removeAt(index);
     });
+    db.updateDatabase();
   }
 
 //__Secure Task__//
   void secureTask(int index) {
     setState(() {
-      if (todolist[index]['secure']) {
+      if (db.todolist[index]['secure']) {
         showDialog(
             context: context,
             builder: (context) {
@@ -61,16 +93,36 @@ class _toDoPageState extends State<toDoPage> {
               );
             });
       } else {
-        todolist[index]['secure'] = !todolist[index]['secure'];
+        db.todolist[index]['secure'] = !db.todolist[index]['secure'];
+        db.updateDatabase();
       }
     });
+  }
+
+  //Task detail
+  void task_detail(int index) {
+    String title = db.todolist[index]['title'];
+    String dateDeCreation = db.todolist[index]['date'];
+    String securite = db.todolist[index]['secure'] ? "Privé" : "Public";
+    final snackBar = SnackBar(
+      content: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text("Titre : " + title),
+          Text("Date : " + dateDeCreation),
+          Text("Status : " + securite),
+        ],
+      ),
+      backgroundColor: Colors.black,
+    );
+    ScaffoldMessenger.of(context).showSnackBar(snackBar);
   }
 
   //__Open Task__
   void openTask(int index) {
     if (_controller.text == password) {
       setState(() {
-        todolist[index]['secure'] = !todolist[index]['secure'];
+        db.todolist[index]['secure'] = !db.todolist[index]['secure'];
       });
       Navigator.of(context).pop();
       _controller.clear();
@@ -79,7 +131,6 @@ class _toDoPageState extends State<toDoPage> {
 
 //__Open Dialog Box__//
   void _openDialog() {
-    print("abc");
     showDialog(
         context: context,
         builder: (context) {
@@ -108,12 +159,18 @@ class _toDoPageState extends State<toDoPage> {
                 Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) =>
-                          Specifictask(text: todolist[index]['title']),
+                      builder: (context) => Specifictask(
+                        text: db.todolist[index]['title'],
+                        id: index,
+                      ),
                     ));
                 _controller.clear();
               } else {
-                print("Faux");
+                final snackBar = SnackBar(
+                  content: Text('Mot de passe incorrect'),
+                  backgroundColor: Colors.red,
+                );
+                ScaffoldMessenger.of(context).showSnackBar(snackBar);
               }
             },
             onCancel: () => Navigator.of(context).pop(),
@@ -126,7 +183,7 @@ class _toDoPageState extends State<toDoPage> {
 
   void _edit_task(int index) {
     setState(() {
-      _controller.text = todolist[index]['title'];
+      _controller.text = db.todolist[index]['title'];
     });
     _openDialog();
   }
@@ -163,6 +220,11 @@ class _toDoPageState extends State<toDoPage> {
                     "Réglage",
                     style: TextStyle(color: Colors.white),
                   ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    // go to reglage page
+                    Navigator.pushNamed(context, '/option');
+                  },
                 ),
                 ListTile(
                   leading: Icon(
@@ -190,19 +252,25 @@ class _toDoPageState extends State<toDoPage> {
           ],
         ),
       ),
-      body: ListView.builder(
-          itemCount: todolist.length,
-          itemBuilder: (context, index) {
-            return ToDoTask(
-              TaskName: todolist[index]['title'],
-              CreatedDate: todolist[index]['date'],
-              delete_task: (context) => deleteTask(index),
-              secure: todolist[index]['secure'],
-              edit_task: () => _edit_task(index),
-              dialog_pass: () => _openPasswordDialog(index),
-              secure_task: () => secureTask(index),
-            );
-          }),
+      body: _myBox.get("TODOLIST") == null
+          ? Center(
+              child: Text("Aucune tâche à réaliser"),
+            )
+          : ListView.builder(
+              itemCount: db.todolist.length,
+              itemBuilder: (context, index) {
+                return ToDoTask(
+                  TaskName: db.todolist[index]['title'],
+                  CreatedDate: db.todolist[index]['date'],
+                  delete_task: (context) => deleteTask(index),
+                  id: index,
+                  secure: db.todolist[index]['secure'],
+                  edit_task: () => _edit_task(index),
+                  task_detail: () => task_detail(index),
+                  dialog_pass: () => _openPasswordDialog(index),
+                  secure_task: () => secureTask(index),
+                );
+              }),
       floatingActionButton: FloatingActionButton(
         onPressed: _openDialog,
         tooltip: "Ajouter une tâche",

@@ -1,12 +1,18 @@
+import 'package:first/pages/reglage.dart';
 import 'package:first/pages/todo_page.dart';
 import 'package:flutter/material.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 // import 'package:firebase_core/firebase_core.dart';
 
-void main() {
+void main() async {
   // WidgetsFlutterBinding.ensureInitialized();
 
   // await Firebase.initializeApp();
+  //initialize the hive
+  await Hive.initFlutter();
 
+  var box = await Hive.openBox("todolist");
+  var singlebox = await Hive.openBox("singleList");
   runApp(MainApp());
 }
 
@@ -18,6 +24,9 @@ class MainApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       home: toDoPage(),
+      routes: {
+        '/option': (context) => Reglage(),
+      },
       // theme: ThemeData(primarySwatch: Colors.indigo),
     );
   }
