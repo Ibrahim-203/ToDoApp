@@ -12,7 +12,6 @@ void main() async {
   await Hive.initFlutter();
 
   var box = await Hive.openBox("todolist");
-  var singlebox = await Hive.openBox("singleList");
   runApp(MainApp());
 }
 

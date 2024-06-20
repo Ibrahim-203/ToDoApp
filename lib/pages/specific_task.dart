@@ -1,6 +1,7 @@
-import 'package:first/database/single_todo.dart';
+import 'package:first/model/todo.dart';
 import 'package:first/pages/utils/dialog_box.dart';
 import 'package:first/pages/utils/todo_task_list.dart';
+import 'package:first/services/database_services.dart';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
@@ -15,46 +16,37 @@ class Specifictask extends StatefulWidget {
 }
 
 class _SpecifictaskState extends State<Specifictask> {
-  final _myBox = Hive.box('singleList');
-  SingleToDo db = SingleToDo();
-
   List demoTask = [
     ['test', false],
   ];
 
-  @override
-  void initState() {
-    // TODO: implement initState
-    if (_myBox.get("SINGLE") == null) {
-      db.createInitialData();
+  final DatabaseServices _databaseServices = DatabaseServices.instance;
+
+  void checkboxChange(bool? value, int id) {
+    var status;
+    if (value == false) {
+      status = 0;
     } else {
-      db.loadData();
+      status = 1;
     }
-    super.initState();
+    _databaseServices.updateSingleTask(id, status);
+    setState(() {});
   }
 
-  void checkboxChange(bool? value, int index) {
-    setState(() {
-      demoTask[index][1] = !demoTask[index][1];
-    });
-  }
-
-  void deleteTask(int index) {
-    setState(() {
-      demoTask.removeAt(index);
-    });
+  void deleteTask(int id) {
+    _databaseServices.deleteSingleTask(id);
+    setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
     //Create a controller
     final _controller = TextEditingController();
-    print(widget.id);
 
     void onSave() {
       if (_controller.text != "") {
+        _databaseServices.addSingleTask(_controller.text, widget.id);
         setState(() {
-          demoTask.add([_controller.text, false]);
           _controller.clear();
         });
       }
@@ -85,17 +77,21 @@ class _SpecifictaskState extends State<Specifictask> {
         title: Text(widget.text),
         backgroundColor: Color(0xff2b3a67),
       ),
-      body: ListView.builder(
-        itemCount: demoTask.length,
-        itemBuilder: (context, index) {
-          return TaskList(
-            TaskName: demoTask[index][0],
-            TaskCompleted: demoTask[index][1],
-            delete_task: (context) => deleteTask(index),
-            onChanged: (value) => checkboxChange(value, index),
-          );
-        },
-      ),
+      body: FutureBuilder(
+          future: _databaseServices.getSingleTasks(widget.id),
+          builder: (context, snapshot) {
+            return ListView.builder(
+              itemCount: snapshot.data?.length ?? 0,
+              itemBuilder: (context, index) {
+                Todo todo = snapshot.data![index];
+                return TaskList(
+                    TaskName: todo.content,
+                    TaskCompleted: todo.status == 0 ? false : true,
+                    delete_task: (context) => deleteTask(todo.id),
+                    onChanged: (value) => checkboxChange(value, todo.id));
+              },
+            );
+          }),
       floatingActionButton: FloatingActionButton(
         onPressed: _openDialog,
         tooltip: "Ajouter une tâche",

@@ -12,7 +12,7 @@ class ToDoTask extends StatelessWidget {
   Function()? task_detail;
   Function()? edit_task;
   Function()? dialog_pass;
-  bool secure;
+  int secure;
 
   ToDoTask({
     super.key,
@@ -44,7 +44,7 @@ class ToDoTask extends StatelessWidget {
         ),
         child: GestureDetector(
           onTap: () {
-            if (!secure) {
+            if (secure == 0) {
               Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -87,7 +87,7 @@ class ToDoTask extends StatelessWidget {
                         GestureDetector(
                           onTap: secure_task,
                           child: Icon(
-                            secure ? Icons.lock : Icons.lock_open,
+                            secure == 1 ? Icons.lock : Icons.lock_open,
                             color: Colors.white,
                           ),
                         ),

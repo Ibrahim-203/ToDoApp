@@ -1,7 +1,9 @@
 import 'package:first/database/todo_db.dart';
+import 'package:first/model/task.dart';
 import 'package:first/pages/specific_task.dart';
 import 'package:first/pages/utils/dialog_box.dart';
 import 'package:first/pages/utils/todo_task.dart';
+import 'package:first/services/database_services.dart';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:intl/intl.dart';
@@ -15,40 +17,31 @@ class toDoPage extends StatefulWidget {
 
 class _toDoPageState extends State<toDoPage> {
   final _controller = TextEditingController();
-  ToDoDatabase db = ToDoDatabase();
+  DatabaseServices db = DatabaseServices.instance;
+  // ToDoDatabase db = ToDoDatabase();
 
-  final _myBox = Hive.box('todolist');
+  // final _myBox = Hive.box('todolist');
   // TextEditingController myController = TextEditingController();
-  @override
-  void initState() {
-    if (_myBox.get("TODOLIST") == null) {
-      db.createInitialData();
-    } else {
-      db.loadData();
-    }
-    // TODO: implement initState
-    super.initState();
-  }
+  // @override
+  // void initState() {
+  //   if (_myBox.get("TODOLIST") == null) {
+  //     db.createInitialData();
+  //   } else {
+  //     db.loadData();
+  //   }
+  //   // TODO: implement initState
+  //   super.initState();
+  // }
 
   String password = "password";
 // ----------My functions----------------- //
 
-//__Save Data__//
+//__Save Data (create)__//
   void onSave() {
     if (_controller.text != "") {
-      setState(() {
-        db.todolist.add({
-          'title': _controller.text,
-          'date': GenerateDate(),
-          'secure': false
-        });
-        _controller.clear();
-      });
-
-      // await todoDB.create(title: title);
-      // if (!mounted) return;
-      // fetchTodos();
-      // print(futureTodos);
+      db.addTask(_controller.text, GenerateDate());
+      setState(() {});
+      _controller.clear();
     } else {
       const snackBar = SnackBar(
         content: Text('Veillez remplir le champ'),
@@ -57,7 +50,21 @@ class _toDoPageState extends State<toDoPage> {
       ScaffoldMessenger.of(context).showSnackBar(snackBar);
     }
     Navigator.of(context).pop();
-    db.updateDatabase();
+  }
+
+  void onSaveUp(int id) {
+    if (_controller.text != "") {
+      db.updateTask(id, _controller.text);
+      setState(() {});
+      _controller.clear();
+    } else {
+      const snackBar = SnackBar(
+        content: Text('Veillez remplir le champ'),
+        backgroundColor: Colors.red,
+      );
+      ScaffoldMessenger.of(context).showSnackBar(snackBar);
+    }
+    Navigator.of(context).pop();
   }
 
   //__To Generate current date__
@@ -69,48 +76,42 @@ class _toDoPageState extends State<toDoPage> {
   }
 
 //__Delete Data__//
-  void deleteTask(int index) {
-    setState(() {
-      db.todolist.removeAt(index);
-    });
-    db.updateDatabase();
+  void deleteTask(int id) {
+    db.deleteTaskTempo(id);
+    setState(() {});
   }
 
 //__Secure Task__//
-  void secureTask(int index) {
-    setState(() {
-      if (db.todolist[index]['secure']) {
-        showDialog(
-            context: context,
-            builder: (context) {
-              return DialogBox(
-                title: "Mot de passe",
-                onSaved: () => openTask(index),
-                descriptionText: "Mot de passe",
-                validText: "Rendre public",
-                onCancel: () => Navigator.of(context).pop(),
-                controller: _controller,
-              );
-            });
-      } else {
-        db.todolist[index]['secure'] = !db.todolist[index]['secure'];
-        db.updateDatabase();
-      }
-    });
+  void secureTask(int id, int secure) {
+    if (secure == 1) {
+      showDialog(
+          context: context,
+          builder: (context) {
+            return DialogBox(
+              title: "Mot de passe",
+              onSaved: () => openTask(id),
+              descriptionText: "Mot de passe",
+              validText: "Rendre public",
+              onCancel: () => Navigator.of(context).pop(),
+              controller: _controller,
+            );
+          });
+    } else {
+      db.secureTask(id, secure == 0 ? 1 : 0);
+      setState(() {});
+    }
   }
 
   //Task detail
-  void task_detail(int index) {
-    String title = db.todolist[index]['title'];
-    String dateDeCreation = db.todolist[index]['date'];
-    String securite = db.todolist[index]['secure'] ? "Privé" : "Public";
+  void task_detail(String content, String createdAt, int secure) {
+    String status = secure == 0 ? "public" : "privé";
     final snackBar = SnackBar(
       content: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text("Titre : " + title),
-          Text("Date : " + dateDeCreation),
-          Text("Status : " + securite),
+          Text("Titre : " + content),
+          Text("Date : " + createdAt),
+          Text("Status : " + status),
         ],
       ),
       backgroundColor: Colors.black,
@@ -119,11 +120,10 @@ class _toDoPageState extends State<toDoPage> {
   }
 
   //__Open Task__
-  void openTask(int index) {
+  void openTask(int id) {
     if (_controller.text == password) {
-      setState(() {
-        db.todolist[index]['secure'] = !db.todolist[index]['secure'];
-      });
+      db.secureTask(id, 0);
+      setState(() {});
       Navigator.of(context).pop();
       _controller.clear();
     }
@@ -145,7 +145,22 @@ class _toDoPageState extends State<toDoPage> {
         });
   }
 
-  void _openPasswordDialog(int index) {
+  void _openEditDialog(int id) {
+    showDialog(
+        context: context,
+        builder: (context) {
+          return DialogBox(
+            title: "Modifier la tâche",
+            validText: "Modifier",
+            descriptionText: "Titre tâche",
+            onSaved: () => onSaveUp(id),
+            onCancel: () => Navigator.of(context).pop(),
+            controller: _controller,
+          );
+        });
+  }
+
+  void _openPasswordDialog(int id, String content) {
     showDialog(
         context: context,
         builder: (context) {
@@ -160,8 +175,8 @@ class _toDoPageState extends State<toDoPage> {
                     context,
                     MaterialPageRoute(
                       builder: (context) => Specifictask(
-                        text: db.todolist[index]['title'],
-                        id: index,
+                        text: content,
+                        id: id,
                       ),
                     ));
                 _controller.clear();
@@ -181,11 +196,11 @@ class _toDoPageState extends State<toDoPage> {
 
 //__edit task__
 
-  void _edit_task(int index) {
+  void _edit_task(int id, String content) {
     setState(() {
-      _controller.text = db.todolist[index]['title'];
+      _controller.text = content;
     });
-    _openDialog();
+    _openEditDialog(id);
   }
 
 // ----------My functions----------------- //
@@ -252,25 +267,29 @@ class _toDoPageState extends State<toDoPage> {
           ],
         ),
       ),
-      body: _myBox.get("TODOLIST") == null
-          ? Center(
-              child: Text("Aucune tâche à réaliser"),
-            )
-          : ListView.builder(
-              itemCount: db.todolist.length,
-              itemBuilder: (context, index) {
-                return ToDoTask(
-                  TaskName: db.todolist[index]['title'],
-                  CreatedDate: db.todolist[index]['date'],
-                  delete_task: (context) => deleteTask(index),
-                  id: index,
-                  secure: db.todolist[index]['secure'],
-                  edit_task: () => _edit_task(index),
-                  task_detail: () => task_detail(index),
-                  dialog_pass: () => _openPasswordDialog(index),
-                  secure_task: () => secureTask(index),
-                );
-              }),
+      body: FutureBuilder(
+          future: db.getTasks(),
+          builder: ((context, snapshot) {
+            return ListView.builder(
+                itemCount: snapshot.data?.length ?? 0,
+                itemBuilder: (context, index) {
+                  Tasks task = snapshot.data![index];
+                  print(task);
+                  return ToDoTask(
+                    TaskName: task.content,
+                    CreatedDate: task.createdAt,
+                    delete_task: (context) => deleteTask(task.id),
+                    id: index,
+                    secure: task.secure,
+                    edit_task: () => _edit_task(task.id, task.content),
+                    task_detail: () =>
+                        task_detail(task.content, task.createdAt, task.secure),
+                    dialog_pass: () =>
+                        _openPasswordDialog(task.id, task.content),
+                    secure_task: () => secureTask(task.id, task.secure),
+                  );
+                });
+          })),
       floatingActionButton: FloatingActionButton(
         onPressed: _openDialog,
         tooltip: "Ajouter une tâche",

@@ -46,6 +46,7 @@ class TaskList extends StatelessWidget {
                       ? TextDecoration.lineThrough
                       : TextDecoration.none,
                   color: Colors.white,
+                  fontSize: 20,
                 ),
               ),
             ],

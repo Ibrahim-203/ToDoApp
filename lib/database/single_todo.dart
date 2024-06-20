@@ -1,22 +1,11 @@
-import 'package:hive_flutter/hive_flutter.dart';
+import 'package:first/services/database_services.dart';
 
 class SingleToDo {
-  List demoTask = [];
-
-  final _myBox = Hive.box('singleList');
-  void createInitialData() {
-    demoTask = [
-      [
-        ["abc", 0]
-      ]
-    ];
-  }
-
-  void loadData() {
-    demoTask = _myBox.get("SINGLE");
-  }
-
-  void updateDatabase() {
-    _myBox.put("SINGLE", demoTask);
+  void addSingleTask(String content, int id_task) async {
+    DatabaseServices data = DatabaseServices.instance;
+    final db = await data.database;
+    await db.rawInsert('''
+    INSERT INTO singleTask (content, status,id_task) VALUES (?,?,?)''',
+        [content, 0, id_task]);
   }
 }
