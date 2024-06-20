@@ -1,11 +1,9 @@
-import 'package:first/database/todo_db.dart';
 import 'package:first/model/task.dart';
 import 'package:first/pages/specific_task.dart';
 import 'package:first/pages/utils/dialog_box.dart';
 import 'package:first/pages/utils/todo_task.dart';
 import 'package:first/services/database_services.dart';
 import 'package:flutter/material.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import 'package:intl/intl.dart';
 
 class toDoPage extends StatefulWidget {
@@ -18,23 +16,15 @@ class toDoPage extends StatefulWidget {
 class _toDoPageState extends State<toDoPage> {
   final _controller = TextEditingController();
   DatabaseServices db = DatabaseServices.instance;
-  // ToDoDatabase db = ToDoDatabase();
-
-  // final _myBox = Hive.box('todolist');
-  // TextEditingController myController = TextEditingController();
-  // @override
-  // void initState() {
-  //   if (_myBox.get("TODOLIST") == null) {
-  //     db.createInitialData();
-  //   } else {
-  //     db.loadData();
-  //   }
-  //   // TODO: implement initState
-  //   super.initState();
-  // }
 
   String password = "password";
 // ----------My functions----------------- //
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    setState(() {});
+  }
 
 //__Save Data (create)__//
   void onSave() {
@@ -70,14 +60,14 @@ class _toDoPageState extends State<toDoPage> {
   //__To Generate current date__
 
   String GenerateDate() {
-    final DateFormat formatter = DateFormat('yyyy - MM - dd');
+    final DateFormat formatter = DateFormat('yyyy - MM - dd HH:mm');
     DateTime now = DateTime.now();
     return formatter.format(now);
   }
 
 //__Delete Data__//
   void deleteTask(int id) {
-    db.deleteTaskTempo(id);
+    db.deleteTaskTempo(id, 1);
     setState(() {});
   }
 
@@ -250,6 +240,10 @@ class _toDoPageState extends State<toDoPage> {
                     "Corbeille",
                     style: TextStyle(color: Colors.white),
                   ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.pushNamed(context, '/corbeille');
+                  },
                 ),
               ],
             ),
@@ -268,27 +262,52 @@ class _toDoPageState extends State<toDoPage> {
         ),
       ),
       body: FutureBuilder(
-          future: db.getTasks(),
+          future: db.getTasks(1),
           builder: ((context, snapshot) {
-            return ListView.builder(
-                itemCount: snapshot.data?.length ?? 0,
-                itemBuilder: (context, index) {
-                  Tasks task = snapshot.data![index];
-                  print(task);
-                  return ToDoTask(
-                    TaskName: task.content,
-                    CreatedDate: task.createdAt,
-                    delete_task: (context) => deleteTask(task.id),
-                    id: index,
-                    secure: task.secure,
-                    edit_task: () => _edit_task(task.id, task.content),
-                    task_detail: () =>
-                        task_detail(task.content, task.createdAt, task.secure),
-                    dialog_pass: () =>
-                        _openPasswordDialog(task.id, task.content),
-                    secure_task: () => secureTask(task.id, task.secure),
-                  );
-                });
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return CircularProgressIndicator();
+            } else if (snapshot.hasError) {
+              return Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    'Erreur: ${snapshot.error}',
+                    style: TextStyle(color: Colors.red, fontSize: 16),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 10),
+                  ElevatedButton(
+                    onPressed: () {
+                      // Retry logic here, e.g., call setState() to rebuild the widget
+                      // or use a method to fetch data again.
+                    },
+                    child: Text('Réessayer'),
+                  ),
+                ],
+              );
+            } else if (snapshot.hasData) {
+              return ListView.builder(
+                  itemCount: snapshot.data?.length ?? 0,
+                  itemBuilder: (context, index) {
+                    Tasks task = snapshot.data![index];
+                    print(task);
+                    return ToDoTask(
+                      TaskName: task.content,
+                      CreatedDate: task.createdAt,
+                      delete_task: (context) => deleteTask(task.id),
+                      id: index,
+                      secure: task.secure,
+                      edit_task: () => _edit_task(task.id, task.content),
+                      task_detail: () => task_detail(
+                          task.content, task.createdAt, task.secure),
+                      dialog_pass: () =>
+                          _openPasswordDialog(task.id, task.content),
+                      secure_task: () => secureTask(task.id, task.secure),
+                    );
+                  });
+            } else {
+              return Text('Aucune donnée disponible');
+            }
           })),
       floatingActionButton: FloatingActionButton(
         onPressed: _openDialog,

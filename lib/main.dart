@@ -1,3 +1,4 @@
+import 'package:first/pages/corbeille.dart';
 import 'package:first/pages/reglage.dart';
 import 'package:first/pages/todo_page.dart';
 import 'package:flutter/material.dart';
@@ -25,6 +26,7 @@ class MainApp extends StatelessWidget {
       home: toDoPage(),
       routes: {
         '/option': (context) => Reglage(),
+        '/corbeille': (context) => Corbeille(),
       },
       // theme: ThemeData(primarySwatch: Colors.indigo),
     );

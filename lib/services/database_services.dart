@@ -26,8 +26,6 @@ class DatabaseServices {
     final databaseDirPath = await getDatabasesPath();
     final databasePath = join(databaseDirPath, 'todoDB.db');
 
-    await deleteDatabase(databasePath);
-
     final database = await openDatabase(
       databasePath,
       version: 1,
@@ -140,22 +138,44 @@ class DatabaseServices {
     );
   }
 
-  void deleteTask(int id) async {
+  void deleteAllTask() async {
     final db = await database;
     await db.delete(
       _taskTable,
-      where: "id= ?",
+      where: "status= ?",
       whereArgs: [
-        id,
+        0,
       ],
     );
   }
 
-  void deleteTaskTempo(int id) async {
+  void deleteTaskTempo(int id, int tempo) async {
+    final db = await database;
+    if (tempo == 1) {
+      await db.update(
+        _taskTable,
+        {'status': 0},
+        where: "id= ?",
+        whereArgs: [
+          id,
+        ],
+      );
+    } else {
+      await db.delete(
+        _taskTable,
+        where: "id= ?",
+        whereArgs: [
+          id,
+        ],
+      );
+    }
+  }
+
+  void restoreTask(int id) async {
     final db = await database;
     await db.update(
       _taskTable,
-      {'status': 0},
+      {'status': 1},
       where: "id= ?",
       whereArgs: [
         id,
@@ -163,10 +183,10 @@ class DatabaseServices {
     );
   }
 
-  Future<List<Tasks>?> getTasks() async {
+  Future<List<Tasks>?> getTasks(int id) async {
     final db = await database;
     final data =
-        await db.query(_taskTable, where: 'status = ?', whereArgs: [1]);
+        await db.query(_taskTable, where: 'status = ?', whereArgs: [id]);
 
     List<Tasks> tasks = data
         .map((e) => Tasks(

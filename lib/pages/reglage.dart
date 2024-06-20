@@ -16,13 +16,15 @@ class Reglage extends StatelessWidget {
         padding: const EdgeInsets.all(20.0),
         child: ListView(
           children: [
-            Text(
-              "Changer le mot de passe",
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 15,
-              ),
-            )
+            TextButton(
+                onPressed: () {},
+                child: Text(
+                  "Changer le mot de passe",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                  ),
+                )),
           ],
         ),
       ),
